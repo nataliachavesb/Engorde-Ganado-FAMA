@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Control Ganado Mina</title>
+<style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #fafafa; color: #1a1a1a; margin: 0; padding: 16px;
+  font-size: 13px;
+}
+h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
+.sub { color: #666; font-size: 12px; margin-bottom: 16px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.card { background: white; border: 1px solid #e5e5e5; border-radius: 8px; padding: 12px; }
+.card-label { font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 0.5px; }
+.card-value { font-size: 20px; font-weight: 600; margin-top: 4px; color: #1a1a1a; }
+.card-sub { font-size: 10px; color: #999; margin-top: 2px; }
+.section { background: white; border: 1px solid #e5e5e5; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.section-title { font-size: 13px; margin: 0 0 10px; font-weight: 600; color: #333; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-btn { padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; background: white; font-size: 11px; cursor: pointer; transition: all 0.15s; color: #333; }
+.filter-btn:hover { border-color: #999; }
+.filter-btn.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+th, td { padding: 5px 8px; text-align: right; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
+th { background: #f8f8f8; font-weight: 600; color: #555; cursor: pointer; user-select: none; position: sticky; top: 0; }
+th:hover { background: #efefef; }
+th.sort-asc::after { content: ' \2191'; color: #0a66c2; }
+th.sort-desc::after { content: ' \2193'; color: #0a66c2; }
+th:first-child, td:first-child { text-align: left; font-weight: 500; }
+th:nth-child(2), td:nth-child(2) { text-align: left; }
+th:last-child, td:last-child { text-align: left; }
+tr:hover { background: #fafbfc; }
+.pos { color: #047857; }
+.neg { color: #dc2626; }
+.loading { text-align: center; padding: 40px; color: #888; }
+.error { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; padding: 12px; border-radius: 6px; }
+canvas { max-height: 280px; }
+.chart-wrap { position: relative; height: 280px; }
+.muted { color: #999; }
+.pill { display: inline-block; padding: 1px 6px; border-radius: 10px; font-size: 10px; font-weight: 500; }
+.pill-c1 { background: #dbeafe; color: #1e40af; }
+.pill-c2 { background: #dcfce7; color: #166534; }
+.pill-c3 { background: #fee2e2; color: #991b1b; }
+.pill-sold { background: #f1f5f9; color: #475569; text-decoration: line-through; }
+tr.row-sold td { background: #f8fafc; color: #94a3b8; }
+tr.row-sold td.arete-clickable { color: #94a3b8; }
+.link { color: #0a66c2; text-decoration: none; font-size: 11px; }
+.link:hover { text-decoration: underline; }
+.selector-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.selector-row select { padding: 5px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; background: white; min-width: 220px; }
+.selected-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; min-height: 24px; }
+.animal-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border-radius: 12px; font-size: 11px; background: #f1f5f9; color: #1e293b; border: 1px solid #e2e8f0; }
+.animal-pill .swatch { width: 10px; height: 10px; border-radius: 50%; }
+.animal-pill button { border: none; background: transparent; cursor: pointer; color: #64748b; font-size: 14px; padding: 0 4px; line-height: 1; }
+.animal-pill button:hover { color: #dc2626; }
+.empty-detail { text-align: center; padding: 40px 16px; color: #999; font-size: 12px; }
+td.arete-clickable { cursor: pointer; color: #0a66c2; }
+td.arete-clickable:hover { text-decoration: underline; }
+.sales-card-mat { border-left: 4px solid #16a34a; }
+.sales-card-next { border-left: 4px solid #2563eb; }
+.sales-card-rest { border-left: 4px solid #f59e0b; }
+.sales-card-total { border-left: 4px solid #1a1a1a; background: #f8fafc; }
+.sales-config { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-top: 10px; }
+.cfg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; }
+.cfg-grid label { display: flex; flex-direction: column; font-size: 11px; color: #555; gap: 4px; }
+.cfg-grid input { padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; background: white; }
+.cfg-grid button { align-self: end; height: 30px; }
+.cfg-note { font-size: 11px; color: #666; margin-top: 8px; }
+details summary { cursor: pointer; font-size: 12px; font-weight: 600; color: #555; padding: 6px 0; user-select: none; }
+details summary:hover { color: #1a1a1a; }
+details[open] summary { color: #1a1a1a; }
+</style>
+</head>
+<body>
+<h1>Control Ganado Mina</h1>
+<div class="sub">Proyecto de compra y desarrollo de ganado &middot; Mina y Adri&aacute;n &middot; Machos destetados en la olla &middot; <span id="last-fetched" class="muted" style="font-size:11px;"></span> &middot; <button id="manual-refresh" class="filter-btn" style="padding:2px 8px;font-size:11px;">Refrescar</button></div>
+<div id="content"><div class="loading">Cargando datos del spreadsheet&hellip;</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+
+<script>
+const FILE_ID = '1va9ZyIF8VZSfIUZzj2pOcy0zHtSixBiW';
+const GID = '1841828279';
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/' + FILE_ID + '/export?format=csv&gid=' + GID;
+const DATE_LABELS = ['9-Jul-25', '23-Ago-25', '20-Sep-25', '1-Nov-25', '13-Dic-25', '6-Feb-26', '21-Feb-26', '27-Feb-26', '25-Mar-26', '22-Abr-26', '25-Abr-26', '7-May-26'];
+const GDP_LABELS = ['23-Ago', '20-Sep', '1-Nov', '13-Dic', '6-Feb', '21-Feb', '27-Feb', '25-Mar', '22-Abr', '25-Abr', '7-May'];
+const PRICE_PER_KG = 1800;
+
+const DEFAULT_SALES_CONFIG = {
+  nextSaleCount: 15,
+  nextSaleDays: 15,
+  nextSalePrice: 1590,
+  remainingPrice: 1590,
+  remainingDays: 0
+};
+
+let allRows = [];
+let currentFilter = 'all';
+let sortKey = 'latestWeight';
+let sortDir = 'desc';
+let chart = null;
+let gdpChart = null;
+let padreChart = null;
+let animalDetailChart = null;
+let selectedAnimals = [];
+let salesConfig = Object.assign({}, DEFAULT_SALES_CONFIG);
+let salesConfigOpen = false;
+let lastFetchedAt = null;
+let lastRawText = '';
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      if (inQuotes && text[i + 1] === '"') { current += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      row.push(current); current = '';
+    } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(current); rows.push(row); row = []; current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.length || row.length) { row.push(current); rows.push(row); }
+  return rows;
+}
+
+// Locale-aware number parser: handles "23,2" (Spanish decimal) and "1.234,56" (European)
+function parseNum(s) {
+  if (s == null) return NaN;
+  let str = String(s).trim();
+  if (!str || str === '-') return NaN;
+  const hasComma = str.indexOf(',') >= 0;
+  const hasPeriod = str.indexOf('.') >= 0;
+  if (hasComma && hasPeriod) {
+    // European with decimal: 1.234,56 → 1234.56
+    str = str.replace(/\./g, '').replace(',', '.');
+  } else if (hasComma) {
+    // Spanish decimal: 23,2 → 23.2
+    str = str.replace(',', '.');
+  }
+  return parseFloat(str);
+}
+
+// Currency parser: handles "₡615,565" (US thousand), "₡615.565" (European thousand), "₡1.234,56" (European w/ decimal)
+function parsePrice(s) {
+  if (!s) return null;
+  let str = String(s).replace(/[₡"$\s\\]/g, '');
+  if (!str) return null;
+  const hasComma = str.indexOf(',') >= 0;
+  const hasPeriod = str.indexOf('.') >= 0;
+  if (hasComma && hasPeriod) {
+    // European: 1.234,56 → 1234.56
+    str = str.replace(/\./g, '').replace(',', '.');
+  } else if (hasComma) {
+    // Either thousand (615,565) or decimal (615,5). 3 digits after last separator = thousand
+    const after = str.length - str.lastIndexOf(',') - 1;
+    str = (after === 3) ? str.replace(/,/g, '') : str.replace(',', '.');
+  } else if (hasPeriod) {
+    // Either thousand (615.565) or decimal (615.5). 3 digits after last separator = thousand
+    const after = str.length - str.lastIndexOf('.') - 1;
+    if (after === 3) str = str.replace(/\./g, '');
+  }
+  const v = parseFloat(str);
+  return isNaN(v) ? null : v;
+}
+
+function isValidDate(s) {
+  return s && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(s.trim());
+}
+
+function parseSpreadsheet(text) {
+  const csv = parseCSV(text);
+
+  // Find the header row (the one starting with "ARETE")
+  let headerIdx = -1;
+  for (let i = 0; i < csv.length; i++) {
+    if (csv[i][0] && csv[i][0].trim() === 'ARETE') { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) return [];
+
+  const headers = csv[headerIdx].map(function(h){ return (h || '').trim(); });
+
+  // Find columns by header name (robust to add/remove columns like "Destino")
+  function findCol(test) {
+    for (let i = 0; i < headers.length; i++) {
+      if (test(headers[i], i)) return i;
+    }
+    return -1;
+  }
+  const colArete = 0;
+  const colPadre = 1;
+  const colNac = 2;
+  const colDest = 3;
+  const colEdad = findCol(function(h){ return h === 'Edad'; });
+  const colCastrac = findCol(function(h){ return /^Castrac/i.test(h); });
+  const colLote = findCol(function(h){ return h === 'Lote'; });
+  const colFechaVenta = findCol(function(h){ return /^Fecha de venta/i.test(h); });
+  const colPesoVenta = findCol(function(h){ return /^Peso de venta/i.test(h); });
+  const colPrecioTotal = findCol(function(h){ return /^Precio total/i.test(h); });
+
+  // Weight columns: contiguous date-formatted headers after Edad
+  const weightCols = [];
+  if (colEdad >= 0) {
+    for (let j = colEdad + 1; j < headers.length; j++) {
+      if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(headers[j])) {
+        weightCols.push(j);
+      } else if (weightCols.length > 0) {
+        break;
+      }
+    }
+  }
+
+  // Anchor for gdd ACUM / GP Acum Estabulado: 2 cols before Castrac (fallback: Lote)
+  const anchorCol = colCastrac >= 0 ? colCastrac : colLote;
+  const gddAcumCol = anchorCol > 1 ? anchorCol - 2 : -1;
+
+  // GDP cols: between last weight column and gddAcumCol
+  const firstGdpCol = colEdad >= 0 ? colEdad + 1 + weightCols.length : -1;
+  const gdpCols = [];
+  if (firstGdpCol >= 0 && gddAcumCol > firstGdpCol) {
+    for (let j = firstGdpCol; j < gddAcumCol; j++) gdpCols.push(j);
+  }
+
+  const rows = [];
+  for (let i = headerIdx + 1; i < csv.length; i++) {
+    const fields = csv[i].map(function(f){ return (f || '').trim(); });
+    if (fields.length < 10) continue;
+
+    const arete = (fields[colArete] || '').replace(/\s+/g, '');
+    if (!/^\d{2,5}$/.test(arete)) continue;
+
+    const padre = fields[colPadre] || '-';
+    const fechaNac = fields[colNac];
+    const fechaDest = fields[colDest];
+    const edad = colEdad >= 0 ? parseNum(fields[colEdad]) : NaN;
+    if (isNaN(edad)) continue;
+
+    const weights = weightCols.map(function(c){
+      const v = parseNum(fields[c]);
+      return (!isNaN(v) && v > 50 && v < 1000) ? v : null;
+    });
+
+    const gdps = gdpCols.slice(0, 12).map(function(c){
+      const v = parseNum(fields[c]);
+      return (!isNaN(v) && v > -10 && v < 10) ? v : null;
+    });
+
+    let gdpAcum = null;
+    if (gddAcumCol >= 0) {
+      const c = parseNum(fields[gddAcumCol]);
+      if (!isNaN(c) && c > -5 && c < 5) gdpAcum = c;
+    }
+
+    let corral = null, castrac = '-';
+    if (colLote >= 0 && fields[colLote]) {
+      const m = fields[colLote].match(/Corral\s+(\d+)/);
+      if (m) corral = parseInt(m[1]);
+    }
+    if (colCastrac >= 0) {
+      const c = (fields[colCastrac] || '').toLowerCase();
+      castrac = (c === 'x' || c === 'no') ? c : '-';
+    }
+
+    let fechaVenta = null, pesoVenta = null, precioTotal = null;
+    if (colFechaVenta >= 0 && isValidDate(fields[colFechaVenta])) {
+      fechaVenta = fields[colFechaVenta].trim();
+      if (colPesoVenta >= 0) {
+        const pv = parseNum(fields[colPesoVenta]);
+        pesoVenta = (!isNaN(pv) && pv > 50) ? pv : null;
+      }
+      if (colPrecioTotal >= 0) {
+        precioTotal = parsePrice(fields[colPrecioTotal]);
+      }
+    }
+
+    let latestWeight = null, latestIdx = -1;
+    for (let j = weights.length - 1; j >= 0; j--) {
+      if (weights[j] !== null) { latestWeight = weights[j]; latestIdx = j; break; }
+    }
+    let firstWeight = null;
+    for (let j = 0; j < weights.length; j++) {
+      if (weights[j] !== null) { firstWeight = weights[j]; break; }
+    }
+    const gain = (firstWeight != null && latestWeight != null) ? latestWeight - firstWeight : null;
+
+    rows.push({
+      arete: arete, padre: padre, fechaNac: fechaNac, fechaDest: fechaDest, edad: edad,
+      weights: weights, gdps: gdps, latestWeight: latestWeight, latestIdx: latestIdx,
+      firstWeight: firstWeight, gain: gain,
+      corral: corral, castrac: castrac, gdpAcum: gdpAcum,
+      fechaVenta: fechaVenta, pesoVenta: pesoVenta, precioTotal: precioTotal,
+      isSold: fechaVenta != null
+    });
+  }
+
+  const seen = new Set();
+  return rows.filter(function(r){
+    if (seen.has(r.arete)) return false;
+    seen.add(r.arete);
+    return true;
+  });
+}
+
+function fmt(n, d) {
+  if (d == null) d = 2;
+  if (n == null || isNaN(n)) return '–';
+  return n.toLocaleString('es-CR', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+function fmtCRC(n) {
+  if (n == null || isNaN(n)) return '–';
+  return '₡' + Math.round(n).toLocaleString('es-CR');
+}
+
+function getFiltered() {
+  if (currentFilter === 'all') return allRows;
+  return allRows.filter(function(r){ return r.corral === parseInt(currentFilter); });
+}
+
+function renderStats(rows) {
+  const validLatest = rows.filter(function(r){ return r.latestWeight != null; });
+  const totalKg = validLatest.reduce(function(s, r){ return s + r.latestWeight; }, 0);
+  const avgWeight = validLatest.length ? totalKg / validLatest.length : 0;
+  const validGdp = rows.filter(function(r){ return r.gdpAcum != null; });
+  const avgGdp = validGdp.length ? validGdp.reduce(function(s, r){ return s + r.gdpAcum; }, 0) / validGdp.length : 0;
+  const validGain = rows.filter(function(r){ return r.gain != null; });
+  const totalGain = validGain.reduce(function(s, r){ return s + r.gain; }, 0);
+
+  return '<div class="stats">' +
+    '<div class="card"><div class="card-label">Cantidad animales</div><div class="card-value">' + rows.length + '</div><div class="card-sub">' + (currentFilter === 'all' ? 'Total' : 'Corral ' + currentFilter) + '</div></div>' +
+    '<div class="card"><div class="card-label">Peso total</div><div class="card-value">' + fmt(totalKg, 0) + ' kg</div><div class="card-sub">Suma últimas mediciones</div></div>' +
+    '<div class="card"><div class="card-label">Peso promedio</div><div class="card-value">' + fmt(avgWeight, 1) + ' kg</div><div class="card-sub">Por animal</div></div>' +
+    '<div class="card"><div class="card-label">GdPd promedio</div><div class="card-value">' + fmt(avgGdp, 2) + '</div><div class="card-sub">kg/día acumulado</div></div>' +
+    '<div class="card"><div class="card-label">Ganancia total</div><div class="card-value">' + fmt(totalGain, 0) + ' kg</div><div class="card-sub">Desde inicio</div></div>' +
+    '<div class="card"><div class="card-label">Valor estimado</div><div class="card-value">' + fmtCRC(totalKg * PRICE_PER_KG) + '</div><div class="card-sub">a ₡' + PRICE_PER_KG + '/kg</div></div>' +
+  '</div>';
+}
+
+function renderChart() {
+  const ctx = document.getElementById('weight-chart');
+  if (!ctx) return;
+  if (chart) chart.destroy();
+
+  const corrales = [1, 2, 3];
+  const colors = ['#2563eb', '#16a34a', '#dc2626'];
+
+  const datasets = corrales.map(function(c, i){
+    const corralRows = allRows.filter(function(r){ return r.corral === c; });
+    const data = DATE_LABELS.map(function(_, idx){
+      const vals = corralRows.map(function(r){ return r.weights[idx]; }).filter(function(v){ return v != null; });
+      return vals.length ? vals.reduce(function(a, b){ return a + b; }, 0) / vals.length : null;
+    });
+    return {
+      label: 'Corral ' + c + ' (n=' + corralRows.length + ')',
+      data: data,
+      borderColor: colors[i],
+      backgroundColor: colors[i] + '22',
+      tension: 0.3,
+      spanGaps: true,
+      borderWidth: 2
+    };
+  });
+
+  const overall = DATE_LABELS.map(function(_, idx){
+    const vals = allRows.map(function(r){ return r.weights[idx]; }).filter(function(v){ return v != null; });
+    return vals.length ? vals.reduce(function(a, b){ return a + b; }, 0) / vals.length : null;
+  });
+  datasets.push({
+    label: 'Promedio general (n=' + allRows.length + ')',
+    data: overall,
+    borderColor: '#1a1a1a',
+    backgroundColor: '#1a1a1a11',
+    borderDash: [4, 4],
+    tension: 0.3,
+    spanGaps: true,
+    borderWidth: 2
+  });
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: DATE_LABELS, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+        tooltip: { callbacks: { label: function(ctx){ return ctx.dataset.label + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) + ' kg' : '–'); } } }
+      },
+      scales: {
+        y: { title: { display: true, text: 'Peso promedio (kg)', font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function avgGdpAcross(rows) {
+  return GDP_LABELS.map(function(_, idx){
+    const vals = rows.map(function(r){ return r.gdps[idx]; }).filter(function(v){ return v != null; });
+    return vals.length ? vals.reduce(function(a,b){ return a+b; }, 0) / vals.length : null;
+  });
+}
+
+function renderGdpChart() {
+  const ctx = document.getElementById('gdp-chart');
+  if (!ctx) return;
+  if (gdpChart) gdpChart.destroy();
+
+  const corrales = [1, 2, 3];
+  const corralColors = { 1: '#2563eb', 2: '#16a34a', 3: '#dc2626' };
+
+  const datasets = corrales.map(function(c){
+    const corralRows = allRows.filter(function(r){ return r.corral === c; });
+    return {
+      label: 'Corral ' + c + ' (n=' + corralRows.length + ')',
+      data: avgGdpAcross(corralRows),
+      borderColor: corralColors[c],
+      backgroundColor: corralColors[c] + '22',
+      borderWidth: 2,
+      pointRadius: 4,
+      tension: 0.25,
+      spanGaps: true
+    };
+  });
+
+  datasets.push({
+    label: 'Promedio general (n=' + allRows.length + ')',
+    data: avgGdpAcross(allRows),
+    borderColor: '#1a1a1a',
+    backgroundColor: 'transparent',
+    borderWidth: 3,
+    borderDash: [5, 4],
+    pointRadius: 5,
+    pointBackgroundColor: '#1a1a1a',
+    tension: 0.25,
+    spanGaps: true
+  });
+
+  gdpChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: GDP_LABELS, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx){
+              return ctx.dataset.label + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '–') + ' kg/día';
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          title: { display: true, text: 'GdPd promedio (kg/día)', font: { size: 11 } },
+          suggestedMin: -0.5,
+          suggestedMax: 2.5,
+          grid: { color: function(c){ return c.tick.value === 0 ? '#999' : '#eee'; } }
+        },
+        x: { title: { display: true, text: 'Fin de periodo', font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+const DETAIL_PALETTE = ['#2563eb', '#16a34a', '#dc2626', '#9333ea', '#ea580c', '#0891b2', '#ca8a04', '#db2777', '#65a30d', '#475569'];
+
+function renderAnimalDetailChart() {
+  const ctx = document.getElementById('animal-detail-chart');
+  if (!ctx) return;
+  if (animalDetailChart) animalDetailChart.destroy();
+
+  const selectedRows = selectedAnimals.map(function(arete){
+    return allRows.find(function(r){ return r.arete === arete; });
+  }).filter(function(r){ return r; });
+
+  const datasets = selectedRows.map(function(r, i){
+    return {
+      label: 'Arete ' + r.arete + ' · C' + (r.corral || '?') + ' · ' + r.padre + ' (acum ' + (r.gdpAcum != null ? r.gdpAcum.toFixed(2) : '–') + ')',
+      data: r.gdps,
+      borderColor: DETAIL_PALETTE[i % DETAIL_PALETTE.length],
+      backgroundColor: DETAIL_PALETTE[i % DETAIL_PALETTE.length] + '22',
+      borderWidth: 2,
+      pointRadius: 3,
+      tension: 0.25,
+      spanGaps: true
+    };
+  });
+
+  datasets.push({
+    label: 'Promedio general (referencia)',
+    data: avgGdpAcross(allRows),
+    borderColor: '#999',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderDash: [4, 4],
+    pointRadius: 0,
+    tension: 0.25,
+    spanGaps: true
+  });
+
+  animalDetailChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: GDP_LABELS, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx){
+              return ctx.dataset.label + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '–') + ' kg/día';
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          title: { display: true, text: 'GdPd del periodo (kg/día)', font: { size: 11 } },
+          grid: { color: function(c){ return c.tick.value === 0 ? '#999' : '#eee'; } }
+        },
+        x: { title: { display: true, text: 'Fin de periodo', font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function addSelectedAnimal(arete) {
+  if (!arete) return;
+  if (selectedAnimals.indexOf(arete) !== -1) return;
+  if (selectedAnimals.length >= 10) selectedAnimals.shift();
+  selectedAnimals.push(arete);
+  saveSelected();
+  render();
+}
+
+function removeSelectedAnimal(arete) {
+  selectedAnimals = selectedAnimals.filter(function(a){ return a !== arete; });
+  saveSelected();
+  render();
+}
+
+function clearSelectedAnimals() {
+  selectedAnimals = [];
+  saveSelected();
+  render();
+}
+
+function saveSelected() {
+  try { localStorage.setItem('cattle-selected', JSON.stringify(selectedAnimals)); } catch(e) {}
+}
+
+function renderPadreChart() {
+  const ctx = document.getElementById('padre-chart');
+  if (!ctx) return;
+  if (padreChart) padreChart.destroy();
+
+  const padreMap = {};
+  allRows.forEach(function(r){
+    if (!r.padre || r.padre === '-' || r.padre === '') return;
+    if (r.gdpAcum == null) return;
+    if (!padreMap[r.padre]) padreMap[r.padre] = [];
+    padreMap[r.padre].push(r.gdpAcum);
+  });
+
+  const padres = Object.keys(padreMap);
+  padres.sort(function(a, b){
+    const avgA = padreMap[a].reduce(function(s,v){return s+v;}, 0) / padreMap[a].length;
+    const avgB = padreMap[b].reduce(function(s,v){return s+v;}, 0) / padreMap[b].length;
+    return avgB - avgA;
+  });
+
+  const labels = padres.map(function(p){ return p + ' (n=' + padreMap[p].length + ')'; });
+  const data = padres.map(function(p){
+    const vals = padreMap[p];
+    return vals.reduce(function(s,v){return s+v;}, 0) / vals.length;
+  });
+  const colors = data.map(function(v){
+    if (v >= 0.75) return '#16a34a';
+    if (v >= 0.6) return '#2563eb';
+    if (v >= 0.45) return '#f59e0b';
+    return '#dc2626';
+  });
+
+  padreChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'GdPd Acumulado promedio',
+        data: data,
+        backgroundColor: colors,
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx){
+              const p = padres[ctx.dataIndex];
+              const vals = padreMap[p];
+              const min = Math.min.apply(null, vals);
+              const max = Math.max.apply(null, vals);
+              return ['Promedio: ' + ctx.parsed.x.toFixed(3) + ' kg/día',
+                      'Rango: ' + min.toFixed(2) + ' – ' + max.toFixed(2),
+                      'Animales: ' + vals.length];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'GdPd Acumulado promedio (kg/día)', font: { size: 11 } },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+function sortRows(rows) {
+  return rows.slice().sort(function(a, b){
+    let av = a[sortKey], bv = b[sortKey];
+    if (av == null) av = sortDir === 'asc' ? Infinity : -Infinity;
+    if (bv == null) bv = sortDir === 'asc' ? Infinity : -Infinity;
+    if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sortDir === 'asc' ? av - bv : bv - av;
+  });
+}
+
+function buildAnimalOptions() {
+  const sorted = allRows.slice().sort(function(a, b){
+    if (a.corral !== b.corral) return (a.corral || 99) - (b.corral || 99);
+    return a.arete.localeCompare(b.arete, 'es', { numeric: true });
+  });
+  return sorted.map(function(r){
+    const disabled = selectedAnimals.indexOf(r.arete) !== -1 ? ' disabled' : '';
+    return '<option value="' + r.arete + '"' + disabled + '>Arete ' + r.arete + ' · C' + (r.corral || '?') + ' · ' + r.padre + (r.gdpAcum != null ? ' · acum ' + r.gdpAcum.toFixed(2) : '') + '</option>';
+  }).join('');
+}
+
+function buildPills() {
+  if (!selectedAnimals.length) return '<span class="muted" style="font-size:11px;">Ningún animal seleccionado</span>';
+  return selectedAnimals.map(function(arete, i){
+    const r = allRows.find(function(x){ return x.arete === arete; });
+    const color = DETAIL_PALETTE[i % DETAIL_PALETTE.length];
+    const label = r ? ('Arete ' + r.arete + ' · C' + (r.corral || '?') + ' · ' + r.padre) : ('Arete ' + arete);
+    return '<span class="animal-pill"><span class="swatch" style="background:' + color + ';"></span>' + label + '<button data-remove="' + arete + '" title="Quitar">×</button></span>';
+  }).join('');
+}
+
+function getSoldRows() {
+  return allRows.filter(function(r){ return r.isSold; });
+}
+
+function getActiveRows() {
+  return allRows.filter(function(r){ return !r.isSold; });
+}
+
+function getNextBatch() {
+  const active = getActiveRows().slice().sort(function(a, b){
+    return (b.latestWeight || 0) - (a.latestWeight || 0);
+  });
+  return active.slice(0, salesConfig.nextSaleCount);
+}
+
+function getRemainingActive() {
+  const active = getActiveRows().slice().sort(function(a, b){
+    return (b.latestWeight || 0) - (a.latestWeight || 0);
+  });
+  return active.slice(salesConfig.nextSaleCount);
+}
+
+function projectWeight(r, days) {
+  if (r.latestWeight == null) return null;
+  const rate = r.gdpAcum != null ? r.gdpAcum : 0;
+  return r.latestWeight + rate * days;
+}
+
+function computeSalesData() {
+  const sold = getSoldRows();
+  const materializedKnown = sold.filter(function(r){ return r.precioTotal != null; });
+  const materializedPending = sold.filter(function(r){ return r.precioTotal == null; });
+  const totalMaterialized = materializedKnown.reduce(function(s, r){ return s + r.precioTotal; }, 0);
+
+  const nextBatch = getNextBatch();
+  let nextProjected = 0;
+  let nextProjectedKg = 0;
+  nextBatch.forEach(function(r){
+    const w = projectWeight(r, salesConfig.nextSaleDays);
+    if (w != null) {
+      nextProjectedKg += w;
+      nextProjected += w * salesConfig.nextSalePrice;
+    }
+  });
+
+  const remaining = getRemainingActive();
+  let restProjected = 0;
+  let restProjectedKg = 0;
+  remaining.forEach(function(r){
+    const w = projectWeight(r, salesConfig.remainingDays);
+    if (w != null) {
+      restProjectedKg += w;
+      restProjected += w * salesConfig.remainingPrice;
+    }
+  });
+
+  return {
+    sold: sold,
+    materializedKnown: materializedKnown,
+    materializedPending: materializedPending,
+    totalMaterialized: totalMaterialized,
+    nextBatch: nextBatch,
+    nextProjected: nextProjected,
+    nextProjectedKg: nextProjectedKg,
+    remaining: remaining,
+    restProjected: restProjected,
+    restProjectedKg: restProjectedKg,
+    grandTotal: totalMaterialized + nextProjected + restProjected
+  };
+}
+
+function renderSalesSection() {
+  const d = computeSalesData();
+  const cfg = salesConfig;
+
+  const cards =
+    '<div class="stats">' +
+      '<div class="card sales-card-mat"><div class="card-label">Ingresos materializados</div><div class="card-value">' + fmtCRC(d.totalMaterialized) + '</div><div class="card-sub">' + d.materializedKnown.length + ' vendidos · ' + d.materializedPending.length + ' pendientes de cobro</div></div>' +
+      '<div class="card sales-card-next"><div class="card-label">Próxima venta (' + d.nextBatch.length + ' animales)</div><div class="card-value">' + fmtCRC(d.nextProjected) + '</div><div class="card-sub">' + fmt(d.nextProjectedKg, 0) + ' kg proyectados @ ₡' + cfg.nextSalePrice + '/kg en ' + cfg.nextSaleDays + ' días</div></div>' +
+      '<div class="card sales-card-rest"><div class="card-label">Resto de activos (' + d.remaining.length + ')</div><div class="card-value">' + fmtCRC(d.restProjected) + '</div><div class="card-sub">' + fmt(d.restProjectedKg, 0) + ' kg @ ₡' + cfg.remainingPrice + '/kg' + (cfg.remainingDays ? ' en ' + cfg.remainingDays + ' días' : '') + '</div></div>' +
+      '<div class="card sales-card-total"><div class="card-label">Total proyectado</div><div class="card-value">' + fmtCRC(d.grandTotal) + '</div><div class="card-sub">Materializado + próxima + resto</div></div>' +
+    '</div>';
+
+  const configPanel = salesConfigOpen ?
+    '<div class="sales-config">' +
+      '<div class="cfg-grid">' +
+        '<label>Animales próxima venta<input type="number" id="cfg-count" value="' + cfg.nextSaleCount + '" min="0" step="1"></label>' +
+        '<label>Días hasta próxima venta<input type="number" id="cfg-days" value="' + cfg.nextSaleDays + '" min="0" step="1"></label>' +
+        '<label>Precio próxima venta (₡/kg)<input type="number" id="cfg-price" value="' + cfg.nextSalePrice + '" min="0" step="10"></label>' +
+        '<label>Precio resto (₡/kg)<input type="number" id="cfg-rest-price" value="' + cfg.remainingPrice + '" min="0" step="10"></label>' +
+        '<label>Días para resto (0 = peso actual)<input type="number" id="cfg-rest-days" value="' + cfg.remainingDays + '" min="0" step="1"></label>' +
+        '<button class="filter-btn" id="cfg-reset">Restablecer</button>' +
+      '</div>' +
+      '<div class="cfg-note">Top ' + cfg.nextSaleCount + ' animales activos por peso actual se incluyen en la próxima venta. Peso proyectado = peso actual + GdPd Acum × días.</div>' +
+    '</div>' : '';
+
+  const soldRows = d.sold.slice().sort(function(a, b){
+    // sort by sale date desc
+    return (b.fechaVenta || '').localeCompare(a.fechaVenta || '');
+  });
+  const soldTable = soldRows.length ?
+    '<table style="margin-top:8px;">' +
+      '<thead><tr><th>Arete</th><th>Padre</th><th>Corral</th><th>Fecha venta</th><th>Peso venta</th><th>Precio total</th><th>₡/kg</th></tr></thead>' +
+      '<tbody>' +
+        soldRows.map(function(r){
+          const ratio = (r.precioTotal != null && r.pesoVenta) ? r.precioTotal / r.pesoVenta : null;
+          return '<tr>' +
+            '<td>' + r.arete + '</td>' +
+            '<td>' + r.padre + '</td>' +
+            '<td>' + corralPill(r.corral) + '</td>' +
+            '<td>' + r.fechaVenta + '</td>' +
+            '<td>' + (r.pesoVenta != null ? fmt(r.pesoVenta, 0) + ' kg' : '–') + '</td>' +
+            '<td>' + (r.precioTotal != null ? fmtCRC(r.precioTotal) : '<span class="muted">pendiente</span>') + '</td>' +
+            '<td>' + (ratio != null ? '₡' + Math.round(ratio).toLocaleString('es-CR') : '–') + '</td>' +
+          '</tr>';
+        }).join('') +
+      '</tbody>' +
+    '</table>' : '<div class="muted" style="padding:8px 0;font-size:12px;">No hay animales vendidos todavía.</div>';
+
+  const nextTable = d.nextBatch.length ?
+    '<table style="margin-top:8px;">' +
+      '<thead><tr><th>Arete</th><th>Padre</th><th>Corral</th><th>Peso actual</th><th>GdPd Acum</th><th>Peso proyectado</th><th>Ingreso proyectado</th></tr></thead>' +
+      '<tbody>' +
+        d.nextBatch.map(function(r){
+          const w = projectWeight(r, cfg.nextSaleDays);
+          const ing = w != null ? w * cfg.nextSalePrice : null;
+          return '<tr>' +
+            '<td>' + r.arete + '</td>' +
+            '<td>' + r.padre + '</td>' +
+            '<td>' + corralPill(r.corral) + '</td>' +
+            '<td>' + fmt(r.latestWeight, 0) + ' kg</td>' +
+            '<td>' + fmt(r.gdpAcum) + '</td>' +
+            '<td>' + (w != null ? fmt(w, 1) + ' kg' : '–') + '</td>' +
+            '<td>' + (ing != null ? fmtCRC(ing) : '–') + '</td>' +
+          '</tr>';
+        }).join('') +
+      '</tbody>' +
+    '</table>' : '<div class="muted" style="padding:8px 0;font-size:12px;">Sin animales en próxima venta.</div>';
+
+  return '<div class="section">' +
+    '<div class="section-title">' +
+      '<span>Ingresos: materializados y proyectados</span>' +
+      '<button class="filter-btn" id="toggle-sales-config">' + (salesConfigOpen ? 'Ocultar' : 'Configurar') + '</button>' +
+    '</div>' +
+    cards +
+    configPanel +
+    '<details style="margin-top:10px;"' + (d.sold.length ? ' open' : '') + '>' +
+      '<summary>Detalle vendidos (' + d.sold.length + ')</summary>' +
+      '<div class="table-wrap">' + soldTable + '</div>' +
+    '</details>' +
+    '<details style="margin-top:6px;">' +
+      '<summary>Detalle próxima venta (' + d.nextBatch.length + ' animales)</summary>' +
+      '<div class="table-wrap">' + nextTable + '</div>' +
+    '</details>' +
+  '</div>';
+}
+
+function corralPill(c) {
+  if (!c) return '<span class="muted">–</span>';
+  return '<span class="pill pill-c' + c + '">Corral ' + c + '</span>';
+}
+
+function renderTable() {
+  const rows = sortRows(getFiltered());
+  const trs = rows.map(function(r){
+    const gainCls = r.gain == null ? '' : (r.gain >= 0 ? 'pos' : 'neg');
+    const gainStr = r.gain == null ? '–' : (r.gain >= 0 ? '+' : '') + fmt(r.gain, 0);
+    const gdpCls = r.gdpAcum != null && r.gdpAcum >= 0.5 ? 'pos' : (r.gdpAcum != null && r.gdpAcum < 0 ? 'neg' : '');
+    return '<tr class="' + (r.isSold ? 'row-sold' : '') + '" title="' + (r.isSold ? 'Vendido el ' + r.fechaVenta : '') + '">' +
+      '<td class="arete-clickable" data-arete="' + r.arete + '" title="Agregar al detalle">' + r.arete + (r.isSold ? ' ●' : '') + '</td>' +
+      '<td>' + r.padre + '</td>' +
+      '<td>' + fmt(r.edad, 1) + '</td>' +
+      '<td>' + fmt(r.firstWeight, 0) + '</td>' +
+      '<td>' + fmt(r.latestWeight, 0) + '</td>' +
+      '<td class="' + gainCls + '">' + gainStr + '</td>' +
+      '<td class="' + gdpCls + '">' + fmt(r.gdpAcum) + '</td>' +
+      '<td>' + r.castrac + '</td>' +
+      '<td>' + corralPill(r.corral) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  function arrow(key) { return sortKey === key ? (sortDir === 'asc' ? 'sort-asc' : 'sort-desc') : ''; }
+
+  return '<table>' +
+    '<thead><tr>' +
+      '<th data-key="arete" class="' + arrow('arete') + '">Arete</th>' +
+      '<th data-key="padre" class="' + arrow('padre') + '">Padre</th>' +
+      '<th data-key="edad" class="' + arrow('edad') + '">Edad (m)</th>' +
+      '<th data-key="firstWeight" class="' + arrow('firstWeight') + '">P. inicial</th>' +
+      '<th data-key="latestWeight" class="' + arrow('latestWeight') + '">P. actual</th>' +
+      '<th data-key="gain" class="' + arrow('gain') + '">Δ Peso</th>' +
+      '<th data-key="gdpAcum" class="' + arrow('gdpAcum') + '">GdPd Acum</th>' +
+      '<th>Castrac.</th>' +
+      '<th data-key="corral" class="' + arrow('corral') + '">Lote</th>' +
+    '</tr></thead>' +
+    '<tbody>' + trs + '</tbody>' +
+  '</table>';
+}
+
+function render() {
+  const filtered = getFiltered();
+  const corralOpts = [1, 2, 3].map(function(c){
+    const n = allRows.filter(function(r){ return r.corral === c; }).length;
+    return '<button class="filter-btn ' + (currentFilter == c ? 'active' : '') + '" data-filter="' + c + '">Corral ' + c + ' (' + n + ')</button>';
+  }).join('');
+
+  document.getElementById('content').innerHTML =
+    renderStats(filtered) +
+    renderSalesSection() +
+    '<div class="section">' +
+      '<div class="section-title">' +
+        '<span>Evolución de peso promedio por lote</span>' +
+        '<span class="muted" style="font-weight:400;font-size:11px;">click en la leyenda para mostrar/ocultar lotes</span>' +
+      '</div>' +
+      '<div class="chart-wrap"><canvas id="weight-chart"></canvas></div>' +
+    '</div>' +
+    '<div class="section">' +
+      '<div class="section-title">' +
+        '<span>GdPd por periodo &middot; promedio general y por corral</span>' +
+        '<span class="muted" style="font-weight:400;font-size:11px;">todos los animales</span>' +
+      '</div>' +
+      '<div class="chart-wrap"><canvas id="gdp-chart"></canvas></div>' +
+    '</div>' +
+    '<div class="section">' +
+      '<div class="section-title">' +
+        '<span>GdPd detalle por animal</span>' +
+        '<span class="muted" style="font-weight:400;font-size:11px;">elegí del menú o click en el arete en la tabla</span>' +
+      '</div>' +
+      '<div class="selector-row">' +
+        '<select id="animal-picker"><option value="">+ Agregar animal…</option>' + buildAnimalOptions() + '</select>' +
+        (selectedAnimals.length ? '<button class="filter-btn" id="clear-animals">Limpiar selección</button>' : '') +
+      '</div>' +
+      '<div class="selected-pills" id="selected-pills">' + buildPills() + '</div>' +
+      (selectedAnimals.length ? '<div class="chart-wrap"><canvas id="animal-detail-chart"></canvas></div>' : '<div class="empty-detail">Seleccioná uno o más animales para ver su GdPd periodo a periodo.</div>') +
+    '</div>' +
+    '<div class="section">' +
+      '<div class="section-title">' +
+        '<span>GdPd Acumulado promedio por padre</span>' +
+        '<span class="muted" style="font-weight:400;font-size:11px;">ordenado de mejor a peor · todos los animales</span>' +
+      '</div>' +
+      '<div class="chart-wrap" style="height: ' + Math.max(200, 30 * 8) + 'px;"><canvas id="padre-chart"></canvas></div>' +
+    '</div>' +
+    '<div class="section">' +
+      '<div class="section-title">' +
+        '<span>Detalle por animal (' + filtered.length + ')</span>' +
+        '<div class="filters">' +
+          '<button class="filter-btn ' + (currentFilter === 'all' ? 'active' : '') + '" data-filter="all">Todos (' + allRows.length + ')</button>' +
+          corralOpts +
+        '</div>' +
+      '</div>' +
+      '<div class="table-wrap">' + renderTable() + '</div>' +
+    '</div>';
+
+  document.querySelectorAll('.filter-btn[data-filter]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      currentFilter = btn.dataset.filter;
+      try { localStorage.setItem('cattle-filter', currentFilter); } catch(e) {}
+      render();
+    });
+  });
+
+  document.querySelectorAll('th[data-key]').forEach(function(th){
+    th.addEventListener('click', function(){
+      const key = th.dataset.key;
+      if (sortKey === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      else { sortKey = key; sortDir = (key === 'arete' || key === 'padre') ? 'asc' : 'desc'; }
+      try { localStorage.setItem('cattle-sort', JSON.stringify({ k: sortKey, d: sortDir })); } catch(e) {}
+      render();
+    });
+  });
+
+  const picker = document.getElementById('animal-picker');
+  if (picker) {
+    picker.addEventListener('change', function(){
+      const v = picker.value;
+      if (v) { addSelectedAnimal(v); }
+    });
+  }
+
+  const clearBtn = document.getElementById('clear-animals');
+  if (clearBtn) clearBtn.addEventListener('click', clearSelectedAnimals);
+
+  document.querySelectorAll('#selected-pills button[data-remove]').forEach(function(btn){
+    btn.addEventListener('click', function(){ removeSelectedAnimal(btn.dataset.remove); });
+  });
+
+  document.querySelectorAll('td.arete-clickable').forEach(function(td){
+    td.addEventListener('click', function(){ addSelectedAnimal(td.dataset.arete); });
+  });
+
+  const toggleCfg = document.getElementById('toggle-sales-config');
+  if (toggleCfg) toggleCfg.addEventListener('click', function(){
+    salesConfigOpen = !salesConfigOpen;
+    render();
+  });
+
+  function bindCfg(id, key, asInt) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', function(){
+      const v = asInt ? parseInt(el.value) : parseFloat(el.value);
+      if (!isNaN(v) && v >= 0) {
+        salesConfig[key] = v;
+        try { localStorage.setItem('cattle-sales-config', JSON.stringify(salesConfig)); } catch(e){}
+        render();
+      }
+    });
+  }
+  bindCfg('cfg-count', 'nextSaleCount', true);
+  bindCfg('cfg-days', 'nextSaleDays', true);
+  bindCfg('cfg-price', 'nextSalePrice', true);
+  bindCfg('cfg-rest-price', 'remainingPrice', true);
+  bindCfg('cfg-rest-days', 'remainingDays', true);
+
+  const resetCfg = document.getElementById('cfg-reset');
+  if (resetCfg) resetCfg.addEventListener('click', function(){
+    salesConfig = Object.assign({}, DEFAULT_SALES_CONFIG);
+    try { localStorage.setItem('cattle-sales-config', JSON.stringify(salesConfig)); } catch(e){}
+    render();
+  });
+
+  renderChart();
+  renderGdpChart();
+  if (selectedAnimals.length) renderAnimalDetailChart();
+  renderPadreChart();
+
+  const lf = document.getElementById('last-fetched');
+  if (lf && lastFetchedAt) {
+    lf.textContent = 'Datos: ' + lastFetchedAt.toLocaleString('es-CR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+}
+
+async function loadData() {
+  try {
+    try {
+      const f = localStorage.getItem('cattle-filter');
+      if (f === 'all' || f === '1' || f === '2' || f === '3') currentFilter = f;
+      else currentFilter = 'all';
+      const s = localStorage.getItem('cattle-sort');
+      if (s) { const parsed = JSON.parse(s); sortKey = parsed.k; sortDir = parsed.d; }
+      const sel = localStorage.getItem('cattle-selected');
+      if (sel) { const parsedSel = JSON.parse(sel); if (Array.isArray(parsedSel)) selectedAnimals = parsedSel; }
+      const scfg = localStorage.getItem('cattle-sales-config');
+      if (scfg) {
+        const parsedScfg = JSON.parse(scfg);
+        if (parsedScfg && typeof parsedScfg === 'object') salesConfig = Object.assign({}, DEFAULT_SALES_CONFIG, parsedScfg);
+      }
+    } catch(e) {}
+
+    // Cache-bust so the published Google Sheet always returns fresh CSV.
+    const url = CSV_URL + '&_=' + Date.now();
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error('No se pudo leer la hoja pública (HTTP ' + response.status + '). Verificá que la hoja esté compartida como "Cualquiera con el enlace · Lector".');
+    }
+    const text = await response.text();
+
+    allRows = parseSpreadsheet(text);
+    lastFetchedAt = new Date();
+    lastRawText = text;
+
+    if (allRows.length === 0) {
+      document.getElementById('content').innerHTML =
+        '<div class="error">No se pudieron extraer filas del spreadsheet. Verificá que la hoja esté publicada y que tenga la columna ARETE.</div>';
+      return;
+    }
+
+    render();
+  } catch (err) {
+    document.getElementById('content').innerHTML =
+      '<div class="error">Error cargando datos: ' + (err && err.message ? err.message : err) + '</div>';
+    console.error(err);
+  }
+}
+
+// Auto-refresh cada 5 minutos para que el dashboard se mantenga al día.
+setInterval(loadData, 5 * 60 * 1000);
+
+document.addEventListener('DOMContentLoaded', function(){
+  const btn = document.getElementById('manual-refresh');
+  if (btn) btn.addEventListener('click', function(){
+    document.getElementById('content').innerHTML = '<div class="loading">Refrescando&hellip;</div>';
+    loadData();
+  });
+});
+
+loadData();
+</script>
+</body>
+</html>
