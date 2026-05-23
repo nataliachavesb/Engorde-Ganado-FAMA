@@ -87,8 +87,22 @@ details[open] summary { color: #1a1a1a; }
 const FILE_ID = '1va9ZyIF8VZSfIUZzj2pOcy0zHtSixBiW';
 const GID = '1841828279';
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/' + FILE_ID + '/export?format=csv&gid=' + GID;
-const DATE_LABELS = ['9-Jul-25', '23-Ago-25', '20-Sep-25', '1-Nov-25', '13-Dic-25', '6-Feb-26', '21-Feb-26', '27-Feb-26', '25-Mar-26', '22-Abr-26', '25-Abr-26', '7-May-26'];
-const GDP_LABELS = ['23-Ago', '20-Sep', '1-Nov', '13-Dic', '6-Feb', '21-Feb', '27-Feb', '25-Mar', '22-Abr', '25-Abr', '7-May'];
+// Dinámico: se completan en parse() a partir de los headers del sheet
+let DATE_LABELS = [];
+let GDP_LABELS = [];
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function fmtDateLabel(h){
+  const m = String(h||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (!m) return h;
+  const d = parseInt(m[1],10), mo = parseInt(m[2],10);
+  let y = m[3]; if (y.length === 4) y = y.slice(2);
+  return d + '-' + (MESES[mo-1]||mo) + '-' + y;
+}
+function fmtGdpLabel(h){
+  const m = String(h||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (!m) return h;
+  return parseInt(m[1],10) + '-' + (MESES[parseInt(m[2],10)-1]||m[2]);
+}
 const PRICE_PER_KG = 1800;
 
 const DEFAULT_SALES_CONFIG = {
@@ -222,6 +236,11 @@ function parseSpreadsheet(text) {
     }
   }
 
+  // Generar etiquetas dinámicas desde los headers detectados
+  DATE_LABELS = weightCols.map(function(c){ return fmtDateLabel(headers[c]); });
+  // GDP labels: cada periodo se etiqueta con la fecha final (todas las pesadas excepto la primera)
+  GDP_LABELS = weightCols.slice(1).map(function(c){ return fmtGdpLabel(headers[c]); });
+
   // Anchor for gdd ACUM / GP Acum Estabulado: 2 cols before Castrac (fallback: Lote)
   const anchorCol = colCastrac >= 0 ? colCastrac : colLote;
   const gddAcumCol = anchorCol > 1 ? anchorCol - 2 : -1;
@@ -252,7 +271,7 @@ function parseSpreadsheet(text) {
       return (!isNaN(v) && v > 50 && v < 1000) ? v : null;
     });
 
-    const gdps = gdpCols.slice(0, 12).map(function(c){
+    const gdps = gdpCols.map(function(c){
       const v = parseNum(fields[c]);
       return (!isNaN(v) && v > -10 && v < 10) ? v : null;
     });
